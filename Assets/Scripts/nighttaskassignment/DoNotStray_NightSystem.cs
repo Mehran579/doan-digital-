@@ -10,6 +10,7 @@ namespace DoNotStray
     public enum Status { Ready, Abducted, Dead }
 
     // ---------- every tunable number lives here ----------
+    [Serializable]
     public class Config
     {
         // Daily luck
@@ -39,8 +40,20 @@ namespace DoNotStray
         public double FireOffMult = 1.5;       // not enough firewood: +50% risk
 
         // Consumption per person per night (leader counts as a person)
-        public Dictionary<Resource, double> NeedPerPerson = new Dictionary<Resource, double>
-            { { Resource.Firewood, 0.5 }, { Resource.Water, 1 }, { Resource.Food, 1 } };
+        public double NeedFirewood = 0.4;
+        public double NeedWater = 0.5;
+        public double NeedFood = 0.5;
+
+        // Storage and starting stock
+        public int MaxStorage = 12;
+        public int StartFirewood = 3;
+        public int StartWater = 4;
+        public int StartFood = 3;
+
+        public double NeedPerPerson(Resource r)
+        {
+            return r == Resource.Firewood ? NeedFirewood : r == Resource.Water ? NeedWater : NeedFood;
+        }
     }
 
     public class Survivor
@@ -127,7 +140,7 @@ namespace DoNotStray
         }
         public int Add(Resource r, int n) { int added = Math.Min(n, Max[r] - Stock[r]); Stock[r] += added; return added; }
         public int Take(Resource r, int n) { int t = Math.Min(n, Stock[r]); Stock[r] -= t; return t; }
-        public static int Need(Resource r, int peopleAlive, Config c) { return (int)Math.Ceiling(peopleAlive * c.NeedPerPerson[r]); }
+        public static int Need(Resource r, int peopleAlive, Config c) { return (int)Math.Ceiling(peopleAlive * c.NeedPerPerson(r)); }
     }
 
     public class GatherReport

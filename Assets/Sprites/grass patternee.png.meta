@@ -1,0 +1,425 @@
+fileFormatVersion: 2
+guid: e9289699dd87fcb4e93d097d4374fc76
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -4246799059533343888
+    second: grass patternee_0
+  - first:
+      213: 3569543693964047072
+    second: grass patternee_1
+  - first:
+      213: 4870558994930088150
+    second: grass patternee_2
+  - first:
+      213: 2962777536654351164
+    second: grass patternee_3
+  - first:
+      213: -1238993401747538430
+    second: grass patternee_4
+  - first:
+      213: 2493632607852745553
+    second: grass patternee_5
+  - first:
+      213: -8745551631534386685
+    second: grass patternee_6
+  - first:
+      213: -3723814534825369209
+    second: grass patternee_7
+  - first:
+      213: -8741179773347393816
+    second: grass patternee_8
+  - first:
+      213: -49962443577907460
+    second: grass patternee_9
+  - first:
+      213: -3280786801636442584
+    second: grass patternee_10
+  - first:
+      213: 1483045971990976639
+    second: grass patternee_11
+  - first:
+      213: -5956374010104995791
+    second: grass patternee_12
+  - first:
+      213: -2490330260525271630
+    second: grass patternee_13
+  - first:
+      213: -2327447389642204629
+    second: grass patternee_14
+  - first:
+      213: -1788446958472881871
+    second: grass patternee_15
+  - first:
+      213: -6316908722544070708
+    second: grass patternee_16
+  - first:
+      213: -2235272966177491588
+    second: grass patternee_17
+  - first:
+      213: 5078211407359727289
+    second: grass patternee_18
+  - first:
+      213: 1256534126835776770
+    second: grass patternee_19
+  - first:
+      213: 5520967763363438436
+    second: grass patternee_20
+  - first:
+      213: 786678194189685629
+    second: grass patternee_21
+  - first:
+      213: 7137822086823741364
+    second: grass patternee_22
+  - first:
+      213: 5587738661932770892
+    second: grass patternee_23
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 1000
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: grass patternee_1
+      rect:
+        serializedVersion: 2
+        x: 154
+        y: 2916
+        width: 1028
+        height: 1028
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e276f0d311998130800000000000000
+      internalID: 3569543693964047072
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_2
+      rect:
+        serializedVersion: 2
+        x: 1476
+        y: 2912
+        width: 1028
+        height: 1028
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d8346eb993b79340800000000000000
+      internalID: 4870558994930088150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_4
+      rect:
+        serializedVersion: 2
+        x: 2814
+        y: 2918
+        width: 1030
+        height: 1032
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 20ef8c9c0163ecee0800000000000000
+      internalID: -1238993401747538430
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_8
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 1584
+        width: 1028
+        height: 1028
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ee8cc31f4711b680800000000000000
+      internalID: -8741179773347393816
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_9
+      rect:
+        serializedVersion: 2
+        x: 1484
+        y: 1584
+        width: 1028
+        height: 1028
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cf6ad6a1c6f7e4ff0800000000000000
+      internalID: -49962443577907460
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_10
+      rect:
+        serializedVersion: 2
+        x: 2814
+        y: 1584
+        width: 1028
+        height: 1028
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82e7ba849cd4872d0800000000000000
+      internalID: -3280786801636442584
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_16
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 246
+        width: 1036
+        height: 1042
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ccfa13a3cf4d558a0800000000000000
+      internalID: -6316908722544070708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_17
+      rect:
+        serializedVersion: 2
+        x: 1484
+        y: 246
+        width: 1028
+        height: 1042
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c75f4fa8417baf0e0800000000000000
+      internalID: -2235272966177491588
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: grass patternee_18
+      rect:
+        serializedVersion: 2
+        x: 2814
+        y: 246
+        width: 1028
+        height: 1028
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9b653069e5e697640800000000000000
+      internalID: 5078211407359727289
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 9aa5375789f59c34b88fdb8f01e819f8
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      grass patternee_0: -4246799059533343888
+      grass patternee_1: 3569543693964047072
+      grass patternee_10: -3280786801636442584
+      grass patternee_11: 1483045971990976639
+      grass patternee_12: -5956374010104995791
+      grass patternee_13: -2490330260525271630
+      grass patternee_14: -2327447389642204629
+      grass patternee_15: -1788446958472881871
+      grass patternee_16: -6316908722544070708
+      grass patternee_17: -2235272966177491588
+      grass patternee_18: 5078211407359727289
+      grass patternee_19: 1256534126835776770
+      grass patternee_2: 4870558994930088150
+      grass patternee_20: 5520967763363438436
+      grass patternee_21: 786678194189685629
+      grass patternee_22: 7137822086823741364
+      grass patternee_23: 5587738661932770892
+      grass patternee_24: 2144099197
+      grass patternee_3: 2962777536654351164
+      grass patternee_4: -1238993401747538430
+      grass patternee_5: 2493632607852745553
+      grass patternee_6: -8745551631534386685
+      grass patternee_7: -3723814534825369209
+      grass patternee_8: -8741179773347393816
+      grass patternee_9: -49962443577907460
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

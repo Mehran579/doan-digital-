@@ -22,43 +22,77 @@ public class TaskAssigner : MonoBehaviour
     int nightsInLevel, lastShortages;
     int night = 1, level = 1;
 
-    // Builds the starting data and opens the first evening. Test values, change as you like.
+    [System.Serializable]
+    public class SurvivorSetup
+    {
+        public string name;
+        [Range(0, 100)] public float baseLuck = 50;
+        [Range(0, 100)] public float escape = 40;
+        public int capacity = 3;
+        [Range(0, 1)] public float findFirewood = 0.5f;
+        [Range(0, 1)] public float findWater = 0.5f;
+        [Range(0, 1)] public float findFood = 0.5f;
+    }
+
+    static SurvivorSetup S(string n, float luck, float esc, int cap, float wood, float water, float food)
+    {
+        return new SurvivorSetup
+        {
+            name = n,
+            baseLuck = luck,
+            escape = esc,
+            capacity = cap,
+            findFirewood = wood,
+            findWater = water,
+            findFood = food
+        };
+    }
+
+    static List<SurvivorSetup> DefaultRoster()
+    {
+        return new List<SurvivorSetup>
+        {
+            //  name           luck escape cap  wood  water food
+            S("Nurse",         60,  25,   3,  0.50f, 0.50f, 0.55f),
+            S("Botanist",      40,  20,   3,  0.60f, 0.75f, 0.90f),
+            S("Detective",     50,  65,   4,  0.50f, 0.55f, 0.50f),
+            S("Scout",         55,  45,   3,  0.85f, 0.90f, 0.80f),
+            S("Strong guy",    40,  85,   6,  0.40f, 0.30f, 0.30f),
+            S("Tutorial guy",  45,  30,   3,  0.40f, 0.40f, 0.40f)
+        };
+    }
+
+    [Header("Rules (editable live in the Inspector)")]
+    [SerializeField] Config config = new Config();
+
+    [Header("Survivors (order = button index for ClickSurvivorByIndex)")]
+    [SerializeField] List<SurvivorSetup> roster = DefaultRoster();
+
+    // Right-click the component header and pick this if the roster is empty or you want the defaults back
+    [ContextMenu("Reset roster to defaults")]
+    void ResetRoster() { roster = DefaultRoster(); }
+
+    // Builds the starting data from the Inspector values and opens the first evening
     void Start()
     {
-        cfg = new Config();
+        cfg = config;
 
-        inv = new Inventory(12);                // max 12 of each
-        inv.Add(Resource.Firewood, 3);          // starting stock
-        inv.Add(Resource.Water, 4);
-        inv.Add(Resource.Food, 3);
+        inv = new Inventory(cfg.MaxStorage);
+        inv.Add(Resource.Firewood, cfg.StartFirewood);
+        inv.Add(Resource.Water, cfg.StartWater);
+        inv.Add(Resource.Food, cfg.StartFood);
 
-        team = new List<Survivor>
+        team = roster.Select(r => new Survivor
         {
-            //   name           luck escape cap  wood  water food
-            Make("Nurse",         60,  25,   3,  0.50, 0.50, 0.55),
-            Make("Botanist",      40,  20,   3,  0.60, 0.75, 0.90),
-            Make("Detective",     50,  65,   4,  0.50, 0.55, 0.50),
-            Make("Scout",         55,  45,   3,  0.85, 0.90, 0.80),
-            Make("Strong guy",    40,  85,   6,  0.40, 0.30, 0.30),
-            Make("Tutorial guy",  45,  30,   3,  0.40, 0.40, 0.40)
-        };
+            Name = r.name,
+            BaseLuck = r.baseLuck,
+            Escape = r.escape,
+            Capacity = r.capacity,
+            FindBase = { { Resource.Firewood, r.findFirewood }, { Resource.Water, r.findWater }, { Resource.Food, r.findFood } }
+        }).ToList();
 
         ui.Init(cfg, inv, team);
         BeginEvening(night, level);
-        if (team.Count > 0) Select(team[0]);
-    }
-
-    static Survivor Make(string name, double baseLuck, double escape, int capacity,
-                         double wood, double water, double food)
-    {
-        return new Survivor
-        {
-            Name = name,
-            BaseLuck = baseLuck,
-            Escape = escape,
-            Capacity = capacity,
-            FindBase = { { Resource.Firewood, wood }, { Resource.Water, water }, { Resource.Food, food } }
-        };
     }
 
     int PeopleAlive() { return team.Count(s => s.Status == Status.Ready) + 1; }   // + leader
@@ -144,6 +178,7 @@ public class TaskAssigner : MonoBehaviour
         nightsInLevel++;
         // play your black fade here, then show the morning message:
         ui.ShowMorningReport(report, night);
+        ui.RefreshInventory(PeopleAlive());     // stock now reflects the haul and what the night used
         ClearAssignments();
     }
 
