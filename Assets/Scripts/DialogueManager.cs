@@ -36,12 +36,17 @@ public class DialogueManager : MonoBehaviour
 
     Coroutine hintRoutine;
     int linesShown;
+    PlayerMovement playerMovement;
+    CompanionGroupController companionGroup;
+    bool movementPausedForDialogue;
+    bool playerWasAlreadyLocked;
 
     public bool IsActive => dialoguePanel != null && dialoguePanel.activeSelf;
 
     void Reset()
     {
         advance = new InputAction("Advance", InputActionType.Button);
+        advance.AddBinding("<Keyboard>/e");
         advance.AddBinding("<Keyboard>/enter");
         advance.AddBinding("<Mouse>/leftButton");
         advance.AddBinding("<Gamepad>/buttonSouth");
@@ -50,14 +55,9 @@ public class DialogueManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        playerMovement = GetComponent<PlayerMovement>();
+        companionGroup = GetComponent<CompanionGroupController>();
         EnsurePlaceholderUI();
-        if (advance == null)
-        {
-            advance = new InputAction("Advance", InputActionType.Button);
-            advance.AddBinding("<Keyboard>/enter");
-            advance.AddBinding("<Mouse>/leftButton");
-            advance.AddBinding("<Gamepad>/buttonSouth");
-        }
         dialoguePanel.SetActive(false);
         SetHintAlpha(0f);
     }
@@ -156,14 +156,72 @@ public class DialogueManager : MonoBehaviour
         return sprite;
     }
 
-    void OnEnable() => advance.Enable();
-    void OnDisable() => advance.Disable();
+    void OnEnable()
+    {
+        EnsureAdvanceAction();
+        advance.Enable();
+        OnDialogueStarted += PauseExplorationForDialogue;
+        OnDialogueEnded += ResumeExplorationAfterDialogue;
+    }
+
+    void OnDisable()
+    {
+        OnDialogueStarted -= PauseExplorationForDialogue;
+        OnDialogueEnded -= ResumeExplorationAfterDialogue;
+        if (advance != null)
+            advance.Disable();
+        ResumeExplorationAfterDialogue();
+    }
+
+    void EnsureAdvanceAction()
+    {
+        if (advance != null && advance.bindings.Count > 0)
+            return;
+
+        advance = new InputAction("Advance", InputActionType.Button);
+        advance.AddBinding("<Keyboard>/e");
+        advance.AddBinding("<Keyboard>/enter");
+        advance.AddBinding("<Keyboard>/numpadEnter");
+        advance.AddBinding("<Mouse>/leftButton");
+        advance.AddBinding("<Gamepad>/buttonSouth");
+    }
+
+    void PauseExplorationForDialogue()
+    {
+        if (playerMovement == null)
+            playerMovement = GetComponent<PlayerMovement>();
+        if (companionGroup == null)
+            companionGroup = GetComponent<CompanionGroupController>();
+
+        if (playerMovement != null)
+        {
+            if (!movementPausedForDialogue)
+                playerWasAlreadyLocked = playerMovement.IsMovementLocked;
+            playerMovement.SetMovementLocked(true);
+            movementPausedForDialogue = true;
+        }
+
+        if (companionGroup != null)
+            companionGroup.BeginDialoguePause(Camera.main, transform.position);
+    }
+
+    void ResumeExplorationAfterDialogue()
+    {
+        if (movementPausedForDialogue && playerMovement != null)
+            playerMovement.SetMovementLocked(playerWasAlreadyLocked);
+        movementPausedForDialogue = false;
+
+        if (companionGroup == null)
+            companionGroup = GetComponent<CompanionGroupController>();
+        if (companionGroup != null)
+            companionGroup.EndDialoguePause();
+    }
 
     void Update()
     {
         if (!IsActive || Time.frameCount == startFrame) return;
 
-        if (advance.WasPressedThisFrame())
+        if (AdvancePressedThisFrame())
         {
             //AudioManager.Play(SFX.DialogueAdvance);
             if (isTyping)
@@ -175,6 +233,21 @@ public class DialogueManager : MonoBehaviour
             }
             else ShowNextLine();
         }
+    }
+
+    bool AdvancePressedThisFrame()
+    {
+        if (advance != null && advance.enabled && advance.WasPressedThisFrame())
+            return true;
+
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null &&
+            (keyboard.eKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame ||
+             keyboard.numpadEnterKey.wasPressedThisFrame))
+            return true;
+
+        Mouse mouse = Mouse.current;
+        return mouse != null && mouse.leftButton.wasPressedThisFrame;
     }
 
     System.Action onComplete;
@@ -221,7 +294,7 @@ public class DialogueManager : MonoBehaviour
             bodyText.text += c;
             //if (c != ' ' && charCount % 2 == 1) AudioManager.Play(SFX.DialogueBlip);
             if (c != ' ') charCount++;
-            yield return new WaitForSeconds(typeSpeed);
+            yield return new WaitForSecondsRealtime(typeSpeed);
         }
         isTyping = false;
         ShowHint();

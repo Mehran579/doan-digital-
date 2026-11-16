@@ -16,6 +16,7 @@ public class PlayerMovement : MonoBehaviour
     public float BaseMoveSpeed => moveSpeed;
     public float CurrentMoveSpeed => movementLocked ? 0f : moveSpeed * movementMultiplier;
     public float MovementMultiplier => movementMultiplier;
+    public bool IsMovementLocked => movementLocked;
 
     public void SetMovementLocked(bool locked)
     {

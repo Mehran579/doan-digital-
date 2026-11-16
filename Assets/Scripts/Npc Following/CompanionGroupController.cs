@@ -45,6 +45,7 @@ public class CompanionGroupController : MonoBehaviour
     CompanionColliderNavMeshCutout navMeshCutout;
     Tilemap poisonousBushTilemap;
     bool fightFormationActive;
+    bool dialoguePauseActive;
     public bool FightFormationGathering { get; private set; }
     public bool FightFormationNearlyGathered { get; private set; }
 
@@ -84,7 +85,7 @@ public class CompanionGroupController : MonoBehaviour
 
     void Update()
     {
-        if (fightFormationActive)
+        if (fightFormationActive || dialoguePauseActive)
             return;
 
         DetectPlayerMovement();
@@ -213,9 +214,131 @@ public class CompanionGroupController : MonoBehaviour
         {
             if (companion == null || !companion.gameObject.activeInHierarchy)
                 continue;
-            companion.SetFightPaused(false);
-            companion.SetExternallyControlled(false);
+            companion.SetFightPaused(dialoguePauseActive);
+            if (!dialoguePauseActive)
+                companion.SetExternallyControlled(false);
         }
+    }
+
+    public void BeginDialoguePause(Camera viewCamera, Vector3 playerPosition)
+    {
+        if (companions == null)
+            return;
+
+        dialoguePauseActive = true;
+        Vector3[] rallyTargets = new Vector3[companions.Length];
+        bool[] participating = new bool[companions.Length];
+        int presentCount = 0;
+        foreach (CompanionAgent companion in companions)
+            if (companion != null && companion.gameObject.activeInHierarchy)
+                presentCount++;
+
+        int rallyIndex = 0;
+        float rallyRadius = Mathf.Min(1.35f, followRadius * 0.6f);
+        for (int i = 0; i < companions.Length; i++)
+        {
+            CompanionAgent companion = companions[i];
+            if (companion == null || !companion.gameObject.activeInHierarchy)
+                continue;
+
+            companion.SetExternallyControlled(true);
+            float angle = presentCount > 0 ? 360f * rallyIndex / presentCount - 90f : -90f;
+            Vector3 offset = new(
+                Mathf.Cos(angle * Mathf.Deg2Rad) * rallyRadius,
+                Mathf.Sin(angle * Mathf.Deg2Rad) * rallyRadius,
+                0f);
+            Vector3 destination = playerPosition + offset;
+            if (viewCamera != null)
+            {
+                Vector3 viewport = viewCamera.WorldToViewportPoint(destination);
+                viewport.x = Mathf.Clamp(viewport.x, 0.08f, 0.92f);
+                viewport.y = Mathf.Clamp(viewport.y, 0.08f, 0.92f);
+                if (viewport.z > 0f)
+                {
+                    destination = viewCamera.ViewportToWorldPoint(viewport);
+                    destination.z = playerPosition.z;
+                }
+            }
+
+            rallyTargets[i] = destination;
+            participating[i] = true;
+            companion.SetRuntimeSpeed(companion.DefaultMoveSpeed);
+            companion.SetFightPaused(false);
+            companion.ClearCachedDestination();
+            if (!companion.TrySetFightDestination(destination))
+            {
+                Debug.LogWarning($"{companion.name} could not path to the dialogue rally point near the player.", companion);
+                companion.SetFightPaused(true);
+            }
+            rallyIndex++;
+        }
+
+        StartCoroutine(WaitForDialogueRallyThenPause(viewCamera, rallyTargets, participating));
+    }
+
+    public void EndDialoguePause()
+    {
+        if (!dialoguePauseActive)
+            return;
+
+        dialoguePauseActive = false;
+        if (companions == null)
+            return;
+
+        foreach (CompanionAgent companion in companions)
+        {
+            if (companion == null || !companion.gameObject.activeInHierarchy)
+                continue;
+
+            companion.SetFightPaused(fightFormationActive);
+            if (!fightFormationActive)
+                companion.SetExternallyControlled(false);
+        }
+    }
+
+    IEnumerator WaitForDialogueRallyThenPause(Camera viewCamera, Vector3[] rallyTargets, bool[] participating)
+    {
+        float timeout = 6f;
+        while (dialoguePauseActive && timeout > 0f)
+        {
+            bool allSettled = true;
+            for (int i = 0; i < companions.Length; i++)
+            {
+                CompanionAgent companion = companions[i];
+                if (!participating[i])
+                    continue;
+                if (companion == null || !companion.gameObject.activeInHierarchy)
+                    continue;
+                bool visible = viewCamera == null || IsInsideCameraView(viewCamera, companion.Position, 0.03f);
+                bool closeToRally = Vector3.Distance(companion.Position, rallyTargets[i]) <= 0.65f;
+                if (!visible || !closeToRally)
+                {
+                    allSettled = false;
+                    break;
+                }
+            }
+
+            if (allSettled)
+                break;
+
+            timeout -= Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (!dialoguePauseActive || companions == null)
+            yield break;
+
+        foreach (CompanionAgent companion in companions)
+            if (companion != null && companion.gameObject.activeInHierarchy)
+                companion.SetFightPaused(true);
+    }
+
+    static bool IsInsideCameraView(Camera viewCamera, Vector3 worldPosition, float margin)
+    {
+        Vector3 viewport = viewCamera.WorldToViewportPoint(worldPosition);
+        return viewport.z >= 0f &&
+               viewport.x >= margin && viewport.x <= 1f - margin &&
+               viewport.y >= margin && viewport.y <= 1f - margin;
     }
 
     void RefreshNavMeshForBotanist()
