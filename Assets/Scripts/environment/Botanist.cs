@@ -18,6 +18,7 @@ public class BushDetector : MonoBehaviour
     public float fadeInDuration = 0.5f;
     public float fadeOutDuration = 1f;
     public float lingerDuration = 3f;
+    public Color confirmedDangerColor = new Color(1f, 0.12f, 0.08f, 1f);
 
     private class BushState
     {
@@ -26,6 +27,7 @@ public class BushDetector : MonoBehaviour
     }
 
     private Dictionary<Vector3Int, BushState> bushes = new();
+    private HashSet<Vector3Int> confirmedDangerousBushes = new();
 
     private float timer;
 
@@ -95,6 +97,23 @@ public class BushDetector : MonoBehaviour
         }
     }
 
+    public void MarkPoisonousBush(Vector3Int cell)
+    {
+        if (poisonousBushTilemap == null || revealedBushTilemap == null ||
+            !poisonousBushTilemap.HasTile(cell))
+            return;
+
+        confirmedDangerousBushes.Add(cell);
+        if (!bushes.ContainsKey(cell))
+        {
+            bushes[cell] = new BushState { alpha = 1f, lastSeen = Time.time };
+            revealedBushTilemap.SetTile(cell, poisonousBushTilemap.GetTile(cell));
+            revealedBushTilemap.SetTileFlags(cell, TileFlags.None);
+        }
+
+        revealedBushTilemap.SetColor(cell, confirmedDangerColor);
+    }
+
     void UpdateBushFades()
     {
         List<Vector3Int> toRemove = new();
@@ -103,6 +122,13 @@ public class BushDetector : MonoBehaviour
         {
             Vector3Int cell = pair.Key;
             BushState state = pair.Value;
+
+            if (confirmedDangerousBushes.Contains(cell))
+            {
+                state.alpha = 1f;
+                revealedBushTilemap.SetColor(cell, confirmedDangerColor);
+                continue;
+            }
 
             bool inRange = Time.time - state.lastSeen <= lingerDuration;
 
@@ -136,6 +162,27 @@ public class BushDetector : MonoBehaviour
             revealedBushTilemap.SetTile(cell, null);
             bushes.Remove(cell);
         }
+    }
+
+    void OnDisable()
+    {
+        // The detector no longer receives Update while disabled, so it cannot
+        // complete its normal fade-out. Remove only the reveal overlay now;
+        // the poisonous source Tilemap is left untouched.
+        if (revealedBushTilemap != null)
+        {
+            revealedBushTilemap.ClearAllTiles();
+            foreach (Vector3Int cell in confirmedDangerousBushes)
+            {
+                if (poisonousBushTilemap == null || !poisonousBushTilemap.HasTile(cell))
+                    continue;
+                revealedBushTilemap.SetTile(cell, poisonousBushTilemap.GetTile(cell));
+                revealedBushTilemap.SetTileFlags(cell, TileFlags.None);
+                revealedBushTilemap.SetColor(cell, confirmedDangerColor);
+            }
+        }
+
+        bushes.Clear();
     }
 
     void OnDrawGizmosSelected()

@@ -10,6 +10,24 @@ public class PlayerMovement : MonoBehaviour
 
     Rigidbody2D rb;
     Vector2 movement;
+    float movementMultiplier = 1f;
+    bool movementLocked;
+
+    public float BaseMoveSpeed => moveSpeed;
+    public float CurrentMoveSpeed => movementLocked ? 0f : moveSpeed * movementMultiplier;
+    public float MovementMultiplier => movementMultiplier;
+
+    public void SetMovementLocked(bool locked)
+    {
+        movementLocked = locked;
+        if (locked && rb != null)
+            rb.linearVelocity = Vector2.zero;
+    }
+
+    public void SetMovementMultiplier(float multiplier)
+    {
+        movementMultiplier = Mathf.Max(0f, multiplier);
+    }
 
     void Awake()
     {
@@ -33,6 +51,6 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        rb.linearVelocity = movement * moveSpeed;
+        rb.linearVelocity = movementLocked ? Vector2.zero : movement * moveSpeed * movementMultiplier;
     }
 }

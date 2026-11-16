@@ -9,12 +9,58 @@ public class CompanionAgent : MonoBehaviour
     [SerializeField] float destinationThreshold = 0.35f;
 
     NavMeshAgent agent;
+    float defaultMoveSpeed;
     Vector3 lastDestination;
     bool hasDestination;
+    bool externallyControlled;
 
     
 
     public Vector3 Position => transform.position;
+    public float DefaultMoveSpeed => defaultMoveSpeed;
+    public bool IsExternallyControlled => externallyControlled;
+
+    public void SetExternallyControlled(bool controlled)
+    {
+        externallyControlled = controlled;
+        if (!controlled)
+            ClearCachedDestination();
+    }
+
+    public void SetRuntimeSpeed(float speed)
+    {
+        if (agent != null)
+            agent.speed = Mathf.Max(0f, speed);
+    }
+
+    public void SetFightPaused(bool paused)
+    {
+        if (agent == null || !agent.enabled)
+            return;
+
+        if (paused)
+        {
+            if (agent.isOnNavMesh)
+            {
+                agent.ResetPath();
+                agent.velocity = Vector3.zero;
+                agent.isStopped = true;
+            }
+        }
+        else if (agent.isOnNavMesh)
+        {
+            agent.isStopped = false;
+        }
+    }
+
+    public bool WarpForFight(Vector3 worldPosition)
+    {
+        if (agent == null || !agent.enabled)
+            return false;
+
+        return NavMesh.SamplePosition(worldPosition, out NavMeshHit hit, 3f, agent.areaMask) &&
+               agent.Warp(hit.position);
+    }
 
     public bool HasReachedDestination =>
         agent != null &&
@@ -25,6 +71,7 @@ public class CompanionAgent : MonoBehaviour
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        defaultMoveSpeed = moveSpeed;
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
@@ -54,6 +101,26 @@ public class CompanionAgent : MonoBehaviour
         return false;
     }
 
+    public void PrepareForTeleport()
+    {
+        hasDestination = false;
+        if (agent.enabled)
+        {
+            if (agent.isOnNavMesh)
+                agent.ResetPath();
+            agent.enabled = false;
+        }
+    }
+
+    public void FinishTeleportAt(Vector3 worldPosition)
+    {
+        hasDestination = false;
+        transform.position = worldPosition;
+        agent.enabled = true;
+        if (!agent.Warp(worldPosition))
+            Debug.LogWarning($"{name}: NavMeshAgent could not rejoin the NavMesh at its teleport destination.", this);
+    }
+
     public bool TryGetValidPosition(
         Vector3 position,
         out Vector3 validPosition)
@@ -70,6 +137,13 @@ public class CompanionAgent : MonoBehaviour
 
         validPosition = Vector3.zero;
         return false;
+    }
+
+    public void ClearCachedDestination()
+    {
+        hasDestination = false;
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+            agent.ResetPath();
     }
 
     public void SetDestination(Vector3 destination)
@@ -91,5 +165,28 @@ public class CompanionAgent : MonoBehaviour
             lastDestination = validPosition;
             hasDestination = true;
         }
+    }
+
+    public bool TrySetFightDestination(Vector3 destination)
+    {
+        if (agent == null || !agent.enabled)
+            return false;
+        if (!agent.isOnNavMesh && !InitializeOnNavMesh())
+            return false;
+
+        if (!NavMesh.SamplePosition(destination, out NavMeshHit hit, 4f, agent.areaMask))
+            return false;
+
+        NavMeshPath path = new NavMeshPath();
+        if (!agent.CalculatePath(hit.position, path) || path.status != NavMeshPathStatus.PathComplete)
+            return false;
+
+        bool assigned = agent.SetPath(path);
+        if (assigned)
+        {
+            hasDestination = true;
+            lastDestination = hit.position;
+        }
+        return assigned;
     }
 }

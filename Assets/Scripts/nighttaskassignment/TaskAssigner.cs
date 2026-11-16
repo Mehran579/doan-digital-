@@ -6,7 +6,19 @@ using DoNotStray;
 
 public class TaskAssigner : MonoBehaviour
 {
+    public static TaskAssigner Instance { get; private set; }
+
+    class RescueRecord
+    {
+        public Survivor survivor;
+        public GameObject original;
+        public GameObject copy;
+        public RescueHidingSpot spot;
+        public int daysRemaining = 1;
+    }
+
     [SerializeField] NightUIManager ui;
+    [SerializeField] bool beginOnStart = true;
 
     Config cfg; Inventory inv; List<Survivor> team;
     // Always exactly 3 parties, one per task. Nobody travels anywhere, it is only UI and maths.
@@ -21,6 +33,27 @@ public class TaskAssigner : MonoBehaviour
     Resource? activeTask;   // the task card the player clicked last
     int nightsInLevel, lastShortages;
     int night = 1, level = 1;
+
+    public System.Action OnResumeExploration;
+    public System.Action<Survivor> OnSurvivorRescued;
+    readonly List<RescueRecord> rescues = new List<RescueRecord>();
+    readonly List<Survivor> expiredRescues = new List<Survivor>();
+
+    void Awake() { Instance = this; }
+
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
+    public void ConfigureForTimedLevel(NightUIManager manager, double levelBaseDanger)
+    {
+        ui = manager;
+        beginOnStart = false;
+        config.BaseDanger = levelBaseDanger;
+    }
+
+    public void StartTimedEvening() { BeginEvening(night, level); }
 
     [System.Serializable]
     public class SurvivorSetup
@@ -91,11 +124,26 @@ public class TaskAssigner : MonoBehaviour
             FindBase = { { Resource.Firewood, r.findFirewood }, { Resource.Water, r.findWater }, { Resource.Food, r.findFood } }
         }).ToList();
 
+        if (ui == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            ui = Object.FindFirstObjectByType<NightUIManager>(FindObjectsInactive.Include);
+#else
+            ui = Object.FindObjectOfType<NightUIManager>(true);
+#endif
+        }
+        if (ui == null) { Debug.LogError("TaskAssigner needs the existing NightUIManager.", this); enabled = false; return; }
         ui.Init(cfg, inv, team);
-        BeginEvening(night, level);
+        if (beginOnStart) BeginEvening(night, level);
     }
 
     int PeopleAlive() { return team.Count(s => s.Status == Status.Ready) + 1; }   // + leader
+
+    public bool IsSurvivorReady(string survivorName)
+    {
+        // Before Start builds the roster, all scene survivors begin available.
+        return team == null || team.Any(s => s.Name == survivorName && s.Status == Status.Ready);
+    }
 
     // Evening starts: roll luck, open the screen
     public void BeginEvening(int night, int level)
@@ -171,15 +219,31 @@ public class TaskAssigner : MonoBehaviour
     // Hook to the "Start night" button
     public void StartNight()
     {
+        ExpireRescueWindows();
         var report = Evening.Resolve(parties, nightsInLevel, cfg, rng);
         Evening.Apply(report, inv);
         var night = Night.Run(inv, team, PeopleAlive(), nightsInLevel, cfg, rng);
+        Survivor tutorial = team.FirstOrDefault(s => s.Name == "Tutorial guy" && s.Status == Status.Ready);
+        if (!night.Attacked && tutorial != null && (this.night >= 2 || rng.NextDouble() < 0.5))
+        {
+            tutorial.Status = Status.Abducted;
+            night.Attacked = true;
+            night.Victim = tutorial;
+        }
         lastShortages = night.Shortages;
         nightsInLevel++;
+        foreach (var survivor in report.Taken) MakeKidnappedCopy(survivor);
+        if (night.Victim != null) MakeKidnappedCopy(night.Victim);
+        RefreshRescueOutlines();
         // play your black fade here, then show the morning message:
         ui.ShowMorningReport(report, night);
-        ui.RefreshInventory(PeopleAlive());     // stock now reflects the haul and what the night used
+        foreach (Survivor lost in expiredRescues)
+            ui.AddMorningReportLine(lost.Name + " was lost after you could not find them in time.");
         ClearAssignments();
+        if (selected != null && selected.Status != Status.Ready) selected = null;
+        if (selected == null) ui.ClearSelectedSurvivor();
+        ui.RefreshEvening(parties, PeopleAlive(), nightsInLevel);
+        ui.RefreshInventory(PeopleAlive());     // stock now reflects the haul and what the night used
     }
 
     // Unity buttons can only pass numbers, so this takes the survivor's position in the team list
@@ -189,8 +253,127 @@ public class TaskAssigner : MonoBehaviour
     }
 
     // Hook to a "Next day" button: opens the next evening screen
-    public void NextEvening() { night++; BeginEvening(night, level); }
+    public void NextEvening()
+    {
+        night++;
+        if (beginOnStart) BeginEvening(night, level);
+        else OnResumeExploration?.Invoke();
+    }
 
     // Call when the player reaches the exit
     public void NextLevel() { nightsInLevel = 0; level++; }
+
+    void MakeKidnappedCopy(Survivor survivor)
+    {
+        var player = GameObject.FindGameObjectWithTag("Player");
+        GameObject survivorsObject = GameObject.Find("survivors");
+        Transform survivorsRoot = survivorsObject != null
+            ? survivorsObject.transform
+            : player != null ? player.transform : null;
+        Transform original = null;
+        if (survivorsRoot != null)
+        {
+            for (int i = 0; i < survivorsRoot.childCount; i++)
+            {
+                Transform child = survivorsRoot.GetChild(i);
+                if (string.Equals(child.name, survivor.Name, System.StringComparison.OrdinalIgnoreCase))
+                { original = child; break; }
+            }
+        }
+
+        RescueHidingSpot spot = RescueHidingSpot.AllSpots.Count == 0
+            ? null
+            : RescueHidingSpot.AllSpots[Random.Range(0, RescueHidingSpot.AllSpots.Count)];
+        Bounds bounds = default;
+        if (spot == null && original != null)
+        {
+            var renderers = FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None);
+            if (renderers.Length > 0)
+            {
+                bounds = renderers[0].bounds;
+                foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
+            }
+        }
+        GameObject copy = null;
+        if (original != null)
+        {
+            copy = Instantiate(original.gameObject, null);
+            copy.name = survivor.Name + " (Kidnapped)";
+            copy.transform.position = spot != null
+                ? spot.transform.position
+                : new Vector3(Random.Range(bounds.min.x, bounds.max.x), Random.Range(bounds.min.y, bounds.max.y), original.position.z);
+            foreach (var behaviour in copy.GetComponentsInChildren<Behaviour>(true)) behaviour.enabled = false;
+            foreach (var collider in copy.GetComponentsInChildren<Collider2D>(true)) collider.enabled = false;
+            foreach (var body in copy.GetComponentsInChildren<Rigidbody2D>(true)) body.simulated = false;
+            original.gameObject.SetActive(false);
+        }
+        rescues.Add(new RescueRecord { survivor = survivor, original = original != null ? original.gameObject : null, copy = copy, spot = spot });
+        if (copy != null) copy.AddComponent<KidnappedSurvivorOutline>();
+        if (spot == null) Debug.LogWarning("No RescueHidingSpot exists; " + survivor.Name + " cannot be rescued in this scene.", this);
+    }
+
+    void ExpireRescueWindows()
+    {
+        expiredRescues.Clear();
+        for (int i = rescues.Count - 1; i >= 0; i--)
+        {
+            RescueRecord record = rescues[i];
+            record.daysRemaining--;
+            if (record.daysRemaining > 0) continue;
+            record.survivor.Status = Status.Dead;
+            expiredRescues.Add(record.survivor);
+            if (record.copy != null)
+            {
+                KidnappedSurvivorOutline outline = record.copy.GetComponent<KidnappedSurvivorOutline>();
+                if (outline != null) outline.SetVisible(false);
+            }
+            if (record.copy != null) record.copy.name = record.survivor.Name + " (Lost)";
+            rescues.RemoveAt(i);
+        }
+        RefreshRescueOutlines();
+    }
+
+    void RefreshRescueOutlines()
+    {
+        bool detectiveReady = team != null && team.Any(s => s.Name == "Detective" && s.Status == Status.Ready);
+        foreach (RescueRecord record in rescues)
+        {
+            if (record.copy == null) continue;
+            KidnappedSurvivorOutline outline = record.copy.GetComponent<KidnappedSurvivorOutline>();
+            if (outline != null) outline.SetVisible(detectiveReady);
+        }
+    }
+
+    public bool HasRescueAt(RescueHidingSpot spot)
+    {
+        return rescues.Any(r => r.spot == spot && r.daysRemaining > 0);
+    }
+
+    public bool CanDetectiveHint()
+    {
+        return team != null && team.Any(s => s.Name == "Detective" && s.Status == Status.Ready) &&
+               rescues.Any(r => r.daysRemaining > 0 && r.copy != null && r.spot != null);
+    }
+
+    public bool TryGetDetectiveHint(out GameObject kidnappedCopy)
+    {
+        RescueRecord record = rescues.FirstOrDefault(r => r.daysRemaining > 0 && r.copy != null && r.spot != null);
+        bool detectiveReady = team != null && team.Any(s => s.Name == "Detective" && s.Status == Status.Ready);
+        kidnappedCopy = detectiveReady && record != null ? record.copy : null;
+        return kidnappedCopy != null;
+    }
+
+    public bool TryRescueAt(RescueHidingSpot spot)
+    {
+        RescueRecord record = rescues.FirstOrDefault(r => r.spot == spot && r.daysRemaining > 0);
+        if (record == null) return false;
+        record.survivor.Status = Status.Ready;
+        if (record.original != null) record.original.SetActive(true);
+        if (record.copy != null) Destroy(record.copy);
+        rescues.Remove(record);
+        RefreshRescueOutlines();
+        OnSurvivorRescued?.Invoke(record.survivor);
+        Debug.Log(record.survivor.Name + " rescued at " + spot.SpotName + ".", this);
+        return true;
+    }
 }

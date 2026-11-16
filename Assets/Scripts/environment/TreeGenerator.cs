@@ -1,10 +1,13 @@
 
+using System.Collections.Generic;
 using UnityEngine;
 
 public class TreeGenerator : MonoBehaviour
 {
     [Header("References")]
+    // Kept as a fallback for existing scene objects that still use one prefab.
     public GameObject treePrefab;
+    public GameObject[] treePrefabs;
     public Collider2D spawnBoundary;
 
     [Header("Tree Distribution")]
@@ -19,9 +22,22 @@ public class TreeGenerator : MonoBehaviour
     [ContextMenu("Generate Trees")]
     void GenerateTrees()
     {
-        if (treePrefab == null || spawnBoundary == null)
+        List<GameObject> availableTreePrefabs = new List<GameObject>();
+        if (treePrefabs != null)
         {
-            Debug.LogError("Assign Tree Prefab and Spawn Boundary!");
+            foreach (GameObject prefab in treePrefabs)
+            {
+                if (prefab != null)
+                    availableTreePrefabs.Add(prefab);
+            }
+        }
+
+        if (availableTreePrefabs.Count == 0 && treePrefab != null)
+            availableTreePrefabs.Add(treePrefab);
+
+        if (availableTreePrefabs.Count == 0 || spawnBoundary == null)
+        {
+            Debug.LogError("Assign at least one Tree Prefab and a Spawn Boundary!");
             return;
         }
 
@@ -76,7 +92,7 @@ public class TreeGenerator : MonoBehaviour
             positions[count++] = pos;
 
             Instantiate(
-                treePrefab,
+                availableTreePrefabs[Random.Range(0, availableTreePrefabs.Count)],
                 new Vector3(pos.x, pos.y, transform.position.z),
                 Quaternion.identity,
                 parent

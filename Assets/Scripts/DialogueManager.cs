@@ -37,7 +37,7 @@ public class DialogueManager : MonoBehaviour
     Coroutine hintRoutine;
     int linesShown;
 
-    public bool IsActive => dialoguePanel.activeSelf;
+    public bool IsActive => dialoguePanel != null && dialoguePanel.activeSelf;
 
     void Reset()
     {
@@ -50,8 +50,110 @@ public class DialogueManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        EnsurePlaceholderUI();
+        if (advance == null)
+        {
+            advance = new InputAction("Advance", InputActionType.Button);
+            advance.AddBinding("<Keyboard>/enter");
+            advance.AddBinding("<Mouse>/leftButton");
+            advance.AddBinding("<Gamepad>/buttonSouth");
+        }
         dialoguePanel.SetActive(false);
         SetHintAlpha(0f);
+    }
+
+    void EnsurePlaceholderUI()
+    {
+        if (dialoguePanel != null && speakerText != null && bodyText != null)
+            return;
+
+        GameObject canvasObject = new("Dialogue Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.pixelPerfect = true;
+        canvas.sortingOrder = 50;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        Sprite whiteSprite = CreateWhiteSprite();
+        GameObject panelObject = CreateRect("Dialogue Panel", canvasObject.transform,
+            new Vector2(0.06f, 0.045f), new Vector2(0.94f, 0.29f));
+        Image panelImage = panelObject.AddComponent<Image>();
+        panelImage.sprite = whiteSprite;
+        panelImage.color = new Color(0.035f, 0.055f, 0.045f, 0.96f);
+        dialoguePanel = panelObject;
+
+        GameObject portraitObject = CreateRect("Portrait", panelObject.transform,
+            new Vector2(0.025f, 0.15f), new Vector2(0.16f, 0.86f));
+        portraitImage = portraitObject.AddComponent<Image>();
+        portraitImage.sprite = whiteSprite;
+        portraitImage.color = new Color(0.12f, 0.16f, 0.12f, 1f);
+        portraitImage.preserveAspect = true;
+        portraitImage.enabled = false;
+
+        speakerText = CreateText("Speaker", panelObject.transform,
+            new Vector2(0.19f, 0.66f), new Vector2(0.95f, 0.9f),
+            32f, new Color(0.93f, 0.78f, 0.42f, 1f), FontStyles.Bold);
+        bodyText = CreateText("Dialogue Text", panelObject.transform,
+            new Vector2(0.19f, 0.18f), new Vector2(0.95f, 0.65f),
+            25f, new Color(0.92f, 0.92f, 0.84f, 1f), FontStyles.Normal);
+        bodyText.alignment = TextAlignmentOptions.TopLeft;
+        bodyText.enableWordWrapping = true;
+
+        GameObject hintObject = CreateRect("Advance Hint", panelObject.transform,
+            new Vector2(0.73f, 0.055f), new Vector2(0.77f, 0.11f));
+        clickHint = hintObject.AddComponent<Image>();
+        clickHint.sprite = whiteSprite;
+        clickHint.color = new Color(0.94f, 0.82f, 0.52f, 1f);
+        CreateText("Advance Hint Label", panelObject.transform,
+            new Vector2(0.78f, 0.035f), new Vector2(0.96f, 0.13f),
+            16f, new Color(0.82f, 0.84f, 0.76f, 1f), FontStyles.Normal).text = "ENTER / CLICK";
+    }
+
+    static GameObject CreateRect(string objectName, Transform parent, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        GameObject child = new(objectName, typeof(RectTransform));
+        child.layer = 5;
+        child.transform.SetParent(parent, false);
+        RectTransform rect = (RectTransform)child.transform;
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        return child;
+    }
+
+    static TMP_Text CreateText(
+        string objectName,
+        Transform parent,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        float fontSize,
+        Color color,
+        FontStyles style)
+    {
+        GameObject child = CreateRect(objectName, parent, anchorMin, anchorMax);
+        TextMeshProUGUI text = child.AddComponent<TextMeshProUGUI>();
+        text.font = TMP_Settings.defaultFontAsset;
+        text.fontSize = fontSize;
+        text.fontStyle = style;
+        text.color = color;
+        text.alignment = TextAlignmentOptions.MidlineLeft;
+        text.margin = new Vector4(8f, 4f, 8f, 4f);
+        return text;
+    }
+
+    static Sprite CreateWhiteSprite()
+    {
+        Texture2D texture = new(1, 1, TextureFormat.RGBA32, false);
+        texture.SetPixel(0, 0, Color.white);
+        texture.Apply();
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+        sprite.name = "Dialogue UI White Pixel";
+        return sprite;
     }
 
     void OnEnable() => advance.Enable();
@@ -78,7 +180,7 @@ public class DialogueManager : MonoBehaviour
     System.Action onComplete;
     public void StartDialogue(DialogueData data, System.Action callback = null)
     {
-        if (data == null || data.lines.Length == 0 || IsActive) return;
+        if (data == null || data.lines == null || data.lines.Length == 0 || IsActive) return;
         this.onComplete = callback;
         startFrame = Time.frameCount;
         lines.Clear();

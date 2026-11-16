@@ -4079,6 +4079,8 @@ GameObject:
   - component: {fileID: 506925831088175387}
   - component: {fileID: 5480204818512671137}
   - component: {fileID: 9164370242019983089}
+  - component: {fileID: 900000000000000001}
+  - component: {fileID: 900000000000000002}
   m_Layer: 0
   m_Name: NightTaskCanvas
   m_TagString: Untagged
@@ -4095,7 +4097,7 @@ RectTransform:
   m_GameObject: {fileID: 5231662723326424572}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1013051097755511141}
@@ -4199,6 +4201,126 @@ MonoBehaviour:
   btnStartNight: {fileID: 7654271060584673688}
   btnNextEvening: {fileID: 9005260314988068987}
   assigner: {fileID: 0}
+--- !u!114 &900000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5231662723326424572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b98ade39376a9a6409b766d81b4498a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoNotStray.NightUIManager
+  nightText: {fileID: 0}
+  levelText: {fileID: 0}
+  campWarningText: {fileID: 0}
+  firewoodText: {fileID: 0}
+  waterText: {fileID: 0}
+  foodText: {fileID: 0}
+  selNameText: {fileID: 0}
+  selStatusText: {fileID: 0}
+  selLuckText: {fileID: 0}
+  selEscapeText: {fileID: 0}
+  selCapacityText: {fileID: 0}
+  selFindText: {fileID: 0}
+  selRiskText: {fileID: 0}
+  assignmentsText: {fileID: 0}
+  planSafeText: {fileID: 0}
+  planTakenText: {fileID: 0}
+  planFirewoodText: {fileID: 0}
+  planWaterText: {fileID: 0}
+  planFoodText: {fileID: 0}
+  morningReportText: {fileID: 0}
+  showPercent: 1
+--- !u!114 &900000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5231662723326424572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b32b0ad7e250b4b48b02714ea1048417, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaskAssigner
+  ui: {fileID: 900000000000000001}
+  beginOnStart: 0
+  config:
+    LuckSigma: 20
+    LuckMin: 5
+    LuckMax: 95
+    HurtLuckPenalty: 8
+    ShortageLuckPenalty: 10
+    BaseDanger: 0.14
+    NightGrowth: 0.25
+    NightCap: 2.5
+    EscapeWeight: 0.65
+    SafetySwing: 1.8
+    PartnerShield: 0.6
+    SizeFactor2: 0.45
+    SizeFactor3Plus: 0.3
+    MinChance: 0.02
+    MaxChance: 0.6
+    FindLuckSwing: 0
+    TeamworkBonus: 0.08
+    NightBase: 0.05
+    NightStep: 0.05
+    NightMax: 0.5
+    FireOnMult: 0.5
+    FireOffMult: 1.5
+    NeedFirewood: 0.4
+    NeedWater: 0.5
+    NeedFood: 0.5
+    MaxStorage: 12
+    StartFirewood: 3
+    StartWater: 4
+    StartFood: 3
+  roster:
+  - name: Nurse
+    baseLuck: 60
+    escape: 25
+    capacity: 3
+    findFirewood: 0.5
+    findWater: 0.5
+    findFood: 0.55
+  - name: Botanist
+    baseLuck: 40
+    escape: 20
+    capacity: 3
+    findFirewood: 0.6
+    findWater: 0.75
+    findFood: 0.9
+  - name: Detective
+    baseLuck: 50
+    escape: 65
+    capacity: 4
+    findFirewood: 0.5
+    findWater: 0.55
+    findFood: 0.5
+  - name: Scout
+    baseLuck: 55
+    escape: 45
+    capacity: 3
+    findFirewood: 0.85
+    findWater: 0.9
+    findFood: 0.8
+  - name: Strong guy
+    baseLuck: 40
+    escape: 85
+    capacity: 6
+    findFirewood: 0.4
+    findWater: 0.3
+    findFood: 0.3
+  - name: Tutorial guy
+    baseLuck: 45
+    escape: 30
+    capacity: 3
+    findFirewood: 0.4
+    findWater: 0.4
+    findFood: 0.4
 --- !u!1 &5515221517108410094
 GameObject:
   m_ObjectHideFlags: 0

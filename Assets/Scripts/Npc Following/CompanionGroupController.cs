@@ -1,5 +1,10 @@
 
+using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.Tilemaps;
+using NavMeshPlus.Components;
+using NavMeshPlus.Extensions;
 
 public class CompanionGroupController : MonoBehaviour
 {
@@ -11,11 +16,14 @@ public class CompanionGroupController : MonoBehaviour
 
     [Header("References")]
     [SerializeField] Transform player;
+    [SerializeField] Transform survivorsRoot;
     [SerializeField] CompanionAgent[] companions;
 
     [Header("Following")]
     [SerializeField] float followRadius = 2.2f;
     [SerializeField] float followUpdateInterval = 0.25f;
+    [SerializeField, Min(1f)] float catchUpSpeedMultiplier = 1.6f;
+    [SerializeField, Min(0f)] float catchUpDistance = 3f;
 
     [Header("Scattering")]
     [SerializeField] float idleRadiusMin = 2.5f;
@@ -33,11 +41,32 @@ public class CompanionGroupController : MonoBehaviour
     float lastPlayerMoveTime;
     float nextFollowUpdate;
     float[] nextIdleUpdate;
+    NavMeshSurface navMeshSurface;
+    CompanionColliderNavMeshCutout navMeshCutout;
+    Tilemap poisonousBushTilemap;
+    bool fightFormationActive;
+    public bool FightFormationGathering { get; private set; }
+    public bool FightFormationNearlyGathered { get; private set; }
+
+    public Transform SurvivorsRoot => survivorsRoot;
+    public CompanionAgent[] Companions => companions;
 
     void Start()
     {
         if (player == null)
             player = transform;
+
+        EnsureNavMesh();
+        DiscoverCompanions();
+
+        TaskAssigner assigner = TaskAssigner.Instance != null
+            ? TaskAssigner.Instance
+            : FindFirstObjectByType<TaskAssigner>();
+        if (assigner != null)
+        {
+            assigner.OnResumeExploration += RefreshNavMeshForBotanist;
+            assigner.OnSurvivorRescued += RefreshNavMeshAfterRescue;
+        }
 
         lastPlayerPosition = player.position;
 
@@ -55,6 +84,9 @@ public class CompanionGroupController : MonoBehaviour
 
     void Update()
     {
+        if (fightFormationActive)
+            return;
+
         DetectPlayerMovement();
 
         bool playerMoving =
@@ -78,6 +110,140 @@ public class CompanionGroupController : MonoBehaviour
             UpdateScattering();
     }
 
+    public IEnumerator BeginFightFormation(Vector3 center, float radius, float gatherSpeed)
+    {
+        if (companions == null)
+            yield break;
+
+        fightFormationActive = true;
+        FightFormationGathering = true;
+        FightFormationNearlyGathered = false;
+        Vector3[] formationTargets = new Vector3[companions.Length];
+        bool[] participating = new bool[companions.Length];
+        int presentCount = 0;
+        foreach (CompanionAgent companion in companions)
+            if (companion != null && companion.gameObject.activeInHierarchy)
+                presentCount++;
+
+        int formationIndex = 0;
+        for (int i = 0; i < companions.Length; i++)
+        {
+            CompanionAgent companion = companions[i];
+            if (companion == null || !companion.gameObject.activeInHierarchy)
+                continue;
+
+            companion.SetExternallyControlled(true);
+            companion.SetFightPaused(false);
+            companion.SetRuntimeSpeed(gatherSpeed);
+
+            float angle = presentCount > 0 ? 360f * formationIndex / presentCount - 90f : -90f;
+            Vector3 offset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad), 0f) * radius;
+            formationTargets[i] = center + offset;
+            participating[i] = true;
+            companion.SetDestination(formationTargets[i]);
+            formationIndex++;
+        }
+
+        // Keep their NavMeshAgents moving until all survivors reach the circle.
+        // Timeout prevents a blocked path from holding the fight coroutine forever.
+        float timeout = 8f;
+        while (timeout > 0f)
+        {
+            bool allArrived = true;
+            bool nearlyGathered = true;
+            for (int i = 0; i < companions.Length; i++)
+            {
+                CompanionAgent companion = companions[i];
+                if (!participating[i])
+                    continue;
+                if (companion == null || !companion.gameObject.activeInHierarchy)
+                    continue;
+                if (Vector3.Distance(companion.Position, formationTargets[i]) > 0.8f)
+                    nearlyGathered = false;
+                if (!companion.HasReachedDestination)
+                {
+                    allArrived = false;
+                }
+            }
+
+            FightFormationNearlyGathered = nearlyGathered;
+            if (allArrived)
+                break;
+
+            timeout -= Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        foreach (CompanionAgent companion in companions)
+        {
+            if (companion != null && companion.gameObject.activeInHierarchy)
+                companion.SetFightPaused(true);
+        }
+        FightFormationGathering = false;
+    }
+
+    public void StopForFight()
+    {
+        if (fightFormationActive || companions == null)
+            return;
+
+        fightFormationActive = true;
+        FightFormationGathering = false;
+        FightFormationNearlyGathered = false;
+        foreach (CompanionAgent companion in companions)
+        {
+            if (companion == null || !companion.gameObject.activeInHierarchy)
+                continue;
+
+            companion.SetExternallyControlled(true);
+            companion.SetFightPaused(true);
+        }
+    }
+
+    public void EndFightFormation()
+    {
+        if (!fightFormationActive)
+            return;
+
+        fightFormationActive = false;
+        if (companions == null)
+            return;
+
+        foreach (CompanionAgent companion in companions)
+        {
+            if (companion == null || !companion.gameObject.activeInHierarchy)
+                continue;
+            companion.SetFightPaused(false);
+            companion.SetExternallyControlled(false);
+        }
+    }
+
+    void RefreshNavMeshForBotanist()
+    {
+        TaskAssigner assigner = TaskAssigner.Instance;
+        bool botanistReady = assigner != null && assigner.IsSurvivorReady("Botanist");
+        if (navMeshCutout == null || navMeshSurface == null)
+            return;
+
+        navMeshCutout.SetPoisonousBushTilemap(poisonousBushTilemap, botanistReady);
+        navMeshSurface.BuildNavMesh();
+    }
+
+    void RefreshNavMeshAfterRescue(DoNotStray.Survivor survivor)
+    {
+        if (survivor != null && survivor.Name == "Botanist")
+            RefreshNavMeshForBotanist();
+    }
+
+    void OnDestroy()
+    {
+        TaskAssigner assigner = TaskAssigner.Instance;
+        if (assigner == null)
+            return;
+        assigner.OnResumeExploration -= RefreshNavMeshForBotanist;
+        assigner.OnSurvivorRescued -= RefreshNavMeshAfterRescue;
+    }
+
     void DetectPlayerMovement()
     {
         float distance =
@@ -91,6 +257,28 @@ public class CompanionGroupController : MonoBehaviour
         lastPlayerPosition = player.position;
     }
 
+    public void OnPlayerTeleported()
+    {
+        if (player == null)
+            return;
+
+        for (int i = 0; i < companions.Length; i++)
+        {
+            CompanionAgent companion = companions[i];
+            if (companion == null || !companion.gameObject.activeInHierarchy)
+                continue;
+
+            // The teleporter warped this independent companion to its
+            // player-relative destination. Recalculate its next follow target.
+            companion.ClearCachedDestination();
+        }
+
+        lastPlayerPosition = player.position;
+        lastPlayerMoveTime = Time.time;
+        nextFollowUpdate = 0f;
+        currentState = GroupState.Following;
+    }
+
     void UpdateFollowing()
     {
         if (Time.time < nextFollowUpdate)
@@ -99,10 +287,15 @@ public class CompanionGroupController : MonoBehaviour
         nextFollowUpdate = Time.time + followUpdateInterval;
 
         int count = companions.Length;
+        PlayerMovement playerMovement = player.GetComponent<PlayerMovement>();
 
         for (int i = 0; i < count; i++)
         {
             if (companions[i] == null)
+                continue;
+            if (!companions[i].gameObject.activeInHierarchy)
+                continue;
+            if (companions[i].IsExternallyControlled)
                 continue;
 
             float angle = (360f / count) * i;
@@ -114,6 +307,13 @@ public class CompanionGroupController : MonoBehaviour
             ) * followRadius;
 
             Vector3 targetPosition = player.position + offset;
+            float normalFollowSpeed = playerMovement != null
+                ? playerMovement.CurrentMoveSpeed
+                : companions[i].DefaultMoveSpeed;
+            bool catchingUp = Vector3.Distance(companions[i].Position, targetPosition) > catchUpDistance;
+            companions[i].SetRuntimeSpeed(catchingUp
+                ? normalFollowSpeed * catchUpSpeedMultiplier
+                : normalFollowSpeed);
 
             companions[i].SetDestination(targetPosition);
         }
@@ -124,6 +324,8 @@ public class CompanionGroupController : MonoBehaviour
         for (int i = 0; i < companions.Length; i++)
         {
             nextIdleUpdate[i] = 0f;
+            if (companions[i] != null && !companions[i].IsExternallyControlled)
+                companions[i].SetRuntimeSpeed(companions[i].DefaultMoveSpeed);
         }
 
         UpdateScattering();
@@ -136,6 +338,10 @@ public class CompanionGroupController : MonoBehaviour
             CompanionAgent companion = companions[i];
 
             if (companion == null)
+                continue;
+            if (!companion.gameObject.activeInHierarchy)
+                continue;
+            if (companion.IsExternallyControlled)
                 continue;
 
             if (Time.time < nextIdleUpdate[i])
@@ -157,6 +363,105 @@ public class CompanionGroupController : MonoBehaviour
                 nextIdleUpdate[i] = Time.time + 1f;
             }
         }
+    }
+
+    void DiscoverCompanions()
+    {
+        if (companions != null && companions.Length > 0)
+            return;
+
+        if (survivorsRoot == null)
+        {
+            GameObject root = GameObject.Find("survivors");
+            survivorsRoot = root != null ? root.transform : player;
+        }
+
+        var found = new System.Collections.Generic.List<CompanionAgent>();
+        for (int i = 0; i < survivorsRoot.childCount; i++)
+        {
+            Transform child = survivorsRoot.GetChild(i);
+            if (child.name.IndexOf("Camera", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                continue;
+            if (child.GetComponent<SpriteRenderer>() == null)
+                continue;
+
+            CompanionAgent agent = child.GetComponent<CompanionAgent>();
+            if (agent == null) agent = child.gameObject.AddComponent<CompanionAgent>();
+            found.Add(agent);
+        }
+        companions = found.ToArray();
+    }
+
+    void EnsureNavMesh()
+    {
+        navMeshSurface = FindFirstObjectByType<NavMeshSurface>();
+        if (navMeshSurface == null)
+        {
+            GameObject navMeshObject = new GameObject("Level 1 NavMesh");
+            navMeshObject.transform.rotation = Quaternion.Euler(270f, 0f, 0f);
+            navMeshSurface = navMeshObject.AddComponent<NavMeshSurface>();
+            navMeshSurface.agentTypeID = NavMesh.GetSettingsByID(0).agentTypeID;
+            navMeshSurface.collectObjects = CollectObjects.Children;
+            navMeshSurface.layerMask = ~0;
+            navMeshSurface.useGeometry = NavMeshCollectGeometry.RenderMeshes;
+            navMeshSurface.hideEditorLogs = true;
+        }
+
+        // Let the custom extension provide every source. With All/Volume,
+        // Unity collects scene renderers and makes tree art walkable too.
+        navMeshSurface.collectObjects = CollectObjects.Children;
+        CollectSources2d sceneWideCollector = navMeshSurface.GetComponent<CollectSources2d>();
+        if (sceneWideCollector != null)
+        {
+            // Destroy is deferred until end-of-frame. Unregister the extension
+            // immediately or this same rebuild still collects every tree sprite.
+            navMeshSurface.NavMeshExtensions.Remove(sceneWideCollector);
+            Destroy(sceneWideCollector);
+        }
+
+        navMeshSurface.defaultArea = 0;
+
+        // Only the specifically named "grass" floor supplies walkable cells.
+        // Do not select similarly named overlays such as "grass unwalkable".
+        Tilemap grass = FindGrassTilemap();
+        if (grass == null)
+        {
+            Debug.LogError("Companion NavMesh requires an active Tilemap named exactly 'grass'. No NavMesh was built.", this);
+            return;
+        }
+
+        // Add area-1 sources from solid 2D colliders. NavMesh's built-in
+        // Not Walkable area cuts these shapes out of the grass navigation mesh.
+        CompanionColliderNavMeshCutout cutout = navMeshSurface.GetComponent<CompanionColliderNavMeshCutout>();
+        if (cutout == null)
+            cutout = navMeshSurface.gameObject.AddComponent<CompanionColliderNavMeshCutout>();
+        navMeshCutout = cutout;
+        cutout.SetWalkableTilemap(grass);
+        BushDetector bushDetector = FindFirstObjectByType<BushDetector>();
+        poisonousBushTilemap = bushDetector != null ? bushDetector.poisonousBushTilemap : null;
+        TaskAssigner assigner = TaskAssigner.Instance != null
+            ? TaskAssigner.Instance
+            : FindFirstObjectByType<TaskAssigner>();
+        bool botanistReady = assigner == null || assigner.IsSurvivorReady("Botanist");
+        cutout.SetPoisonousBushTilemap(poisonousBushTilemap, botanistReady);
+        navMeshSurface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+
+        // Rebuild every time this level starts so current Tilemap and collider
+        // geometry is reflected in the runtime navigation data.
+        navMeshSurface.BuildNavMesh();
+    }
+
+    Tilemap FindGrassTilemap()
+    {
+        Tilemap[] tilemaps = FindObjectsByType<Tilemap>(FindObjectsSortMode.None);
+        foreach (Tilemap tilemap in tilemaps)
+        {
+            if (tilemap == null || !tilemap.gameObject.activeInHierarchy)
+                continue;
+            if (string.Equals(tilemap.gameObject.name, "grass", System.StringComparison.Ordinal))
+                return tilemap;
+        }
+        return null;
     }
 
     bool TryFindIdlePosition(int index, out Vector3 position)
@@ -187,6 +492,8 @@ public class CompanionGroupController : MonoBehaviour
             for (int j = 0; j < companions.Length; j++)
             {
                 if (j == index || companions[j] == null)
+                    continue;
+                if (!companions[j].gameObject.activeInHierarchy)
                     continue;
 
                 float separation = Vector3.Distance(

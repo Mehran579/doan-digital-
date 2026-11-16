@@ -47,6 +47,36 @@ namespace DoNotStray
 
         Config cfg; Inventory inv; List<Survivor> team;
 
+        void Awake()
+        {
+            var texts = GetComponentsInChildren<TMP_Text>(true).ToList();
+            if (nightText == null) nightText = FindText(texts, "NightText");
+            if (levelText == null) levelText = FindText(texts, "LevelText");
+            if (campWarningText == null) campWarningText = FindText(texts, "CampWarningText");
+            if (firewoodText == null) firewoodText = FindText(texts, "FirewoodText");
+            if (waterText == null) waterText = FindText(texts, "WaterText");
+            if (foodText == null) foodText = FindText(texts, "FoodText");
+            if (selNameText == null) selNameText = FindText(texts, "SelNameText");
+            if (selStatusText == null) selStatusText = FindText(texts, "SelStatusText");
+            if (selLuckText == null) selLuckText = FindText(texts, "SelLuckText");
+            if (selEscapeText == null) selEscapeText = FindText(texts, "SelEscapeText");
+            if (selCapacityText == null) selCapacityText = FindText(texts, "SelCapacityText");
+            if (selFindText == null) selFindText = FindText(texts, "SelFindText");
+            if (selRiskText == null) selRiskText = FindText(texts, "SelRiskText");
+            if (assignmentsText == null) assignmentsText = FindText(texts, "AssignmentsText");
+            if (morningReportText == null) morningReportText = FindText(texts, "MorningReportText");
+            if (planSafeText == null) planSafeText = FindText(texts, "PlanSafeText");
+            if (planTakenText == null) planTakenText = FindText(texts, "PlanTakenText");
+            if (planFirewoodText == null) planFirewoodText = FindText(texts, "PlanFirewoodText");
+            if (planWaterText == null) planWaterText = FindText(texts, "PlanWaterText");
+            if (planFoodText == null) planFoodText = FindText(texts, "PlanFoodText");
+        }
+
+        static TMP_Text FindText(List<TMP_Text> texts, string name)
+        {
+            return texts.FirstOrDefault(t => t.name == name);
+        }
+
         // Call once when the level starts
         public void Init(Config config, Inventory inventory, List<Survivor> survivors)
         {
@@ -146,6 +176,18 @@ namespace DoNotStray
         }
 
         public void ClearMorningReport() { Set(morningReportText, ""); }
+
+        public void AddMorningReportLine(string line)
+        {
+            if (morningReportText != null)
+                morningReportText.text += (string.IsNullOrEmpty(morningReportText.text) ? "" : "\n") + line;
+        }
+
+        public void ClearSelectedSurvivor()
+        {
+            Set(selNameText, ""); Set(selStatusText, ""); Set(selLuckText, ""); Set(selEscapeText, "");
+            Set(selCapacityText, ""); Set(selFindText, ""); Set(selRiskText, "");
+        }
 
         // ---------- helpers ----------
         static void Set(TMP_Text t, string s) { if (t != null) t.text = s; }
