@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab1cdd7ea4528ad4b86f3750955fb2e0, type: 3}
+  m_Name: fix the bridge
+  m_EditorClassIdentifier: Assembly-CSharp::ObjectiveData
+  objectiveID: fixthebridge
+  title: Find Planks and Fix the Bridge
+  description: The river crossing is broken. Gather the missing planks and repair it.
+  steps:
+  - stepID: collect_planks
+    description: Find planks
+    requiredAmount: 5
+  - stepID: repair_bridge
+    description: Fix the bridge
+    requiredAmount: 1

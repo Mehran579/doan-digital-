@@ -62,7 +62,7 @@ Shader "Hidden/SolidWhite"
             fixed4 frag(v2f input) : SV_Target
             {
                 fixed alpha = tex2D(_MainTex, input.texcoord).a * input.color.a;
-                return fixed4(alpha, alpha, alpha, alpha);
+                return fixed4(input.color.rgb * alpha, alpha);
             }
             ENDCG
         }
@@ -106,7 +106,7 @@ Shader "Hidden/SolidWhite"
             fixed4 frag(v2f input) : SV_Target
             {
                 fixed alpha = tex2D(_MainTex, input.texcoord).a * input.color.a;
-                return fixed4(alpha, alpha, alpha, alpha);
+                return fixed4(input.color.rgb * alpha, alpha);
             }
             ENDCG
         }

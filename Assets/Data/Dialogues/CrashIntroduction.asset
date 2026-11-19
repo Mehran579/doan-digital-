@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f05fd1511d46bbc4fb286bc4b6ae0f79, type: 3}
+  m_Name: CrashIntroduction
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  lines:
+  - speaker: Leader
+    portrait: {fileID: 0}
+    text: yo is this haven
+  - speaker: Nurse
+    portrait: {fileID: 0}
+    text: doesn't seem so
+  - speaker: Botanist
+    portrait: {fileID: 0}
+    text: we should look for a way to get help
+  - speaker: Scout
+    portrait: {fileID: 0}
+    text: i saw a light post to uhmm
+  - speaker: Scout
+    portrait: {fileID: 0}
+    text: ...
+  - speaker: Scout
+    portrait: {fileID: 0}
+    text: to the north of where we are but i would first need my compus and other
+      stuff to confirm the direction we should head on
+  - speaker: Detective
+    portrait: {fileID: 0}
+    text: Yes but all of our items are stuck in the luggage section of our plane
+      , we should look for some tool to break it open
+  - speaker: You
+    portrait: {fileID: 0}
+    text: We should head out and look for usefull object iif we can find any
